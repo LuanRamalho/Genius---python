@@ -1,9 +1,4 @@
-# Simulate (a Simon clone)
-# By Al Sweigart al@inventwithpython.com
-# http://inventwithpython.com/pygame
-# Released under a "Simplified BSD" license
-
-import random, sys, time, pygame
+import random, sys, time, pygame, json
 from pygame.locals import *
 
 FPS = 30
@@ -38,6 +33,20 @@ BLUERECT   = pygame.Rect(XMARGIN + BUTTONSIZE + BUTTONGAPSIZE, YMARGIN, BUTTONSI
 REDRECT    = pygame.Rect(XMARGIN, YMARGIN + BUTTONSIZE + BUTTONGAPSIZE, BUTTONSIZE, BUTTONSIZE)
 GREENRECT  = pygame.Rect(XMARGIN + BUTTONSIZE + BUTTONGAPSIZE, YMARGIN + BUTTONSIZE + BUTTONGAPSIZE, BUTTONSIZE, BUTTONSIZE)
 
+HIGHSCORE_FILE = "highscore.json"
+
+def loadHighScore():
+    try:
+        with open(HIGHSCORE_FILE, "r") as file:
+            data = json.load(file)
+            return data.get("highscore", 0)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return 0
+
+def saveHighScore(score):
+    with open(HIGHSCORE_FILE, "w") as file:
+        json.dump({"highscore": score}, file)
+
 def main():
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BEEP1, BEEP2, BEEP3, BEEP4
 
@@ -51,11 +60,14 @@ def main():
     infoRect = infoSurf.get_rect()
     infoRect.topleft = (10, WINDOWHEIGHT - 25)
 
-    # load the sound files
+    # Load the sound files
     BEEP1 = pygame.mixer.Sound('beep1.ogg')
     BEEP2 = pygame.mixer.Sound('beep2.ogg')
     BEEP3 = pygame.mixer.Sound('beep3.ogg')
     BEEP4 = pygame.mixer.Sound('beep4.ogg')
+
+    # Load high score
+    highScore = loadHighScore()
 
     # Initialize some variables for a new game
     pattern = [] # stores the pattern of colors
@@ -72,8 +84,13 @@ def main():
 
         scoreSurf = BASICFONT.render('Score: ' + str(score), 1, WHITE)
         scoreRect = scoreSurf.get_rect()
-        scoreRect.topleft = (WINDOWWIDTH - 100, 10)
+        scoreRect.topleft = (WINDOWWIDTH - 150, 10)
         DISPLAYSURF.blit(scoreSurf, scoreRect)
+
+        highScoreSurf = BASICFONT.render('High Score: ' + str(highScore), 1, WHITE)
+        highScoreRect = highScoreSurf.get_rect()
+        highScoreRect.topleft = (WINDOWWIDTH - 150, 30)
+        DISPLAYSURF.blit(highScoreSurf, highScoreRect)
 
         DISPLAYSURF.blit(infoSurf, infoRect)
 
@@ -91,8 +108,6 @@ def main():
                     clickedButton = RED
                 elif event.key == K_s:
                     clickedButton = GREEN
-
-
 
         if not waitingForInput:
             # play the pattern
@@ -115,6 +130,9 @@ def main():
                     # pushed the last button in the pattern
                     changeBackgroundAnimation()
                     score += 1
+                    if score > highScore:
+                        highScore = score
+                        saveHighScore(highScore)
                     waitingForInput = False
                     currentStep = 0 # reset back to first step
 
